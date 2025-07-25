@@ -29,7 +29,7 @@ aggregated["numsessions"] = merged.groupby(["date", "machineid"]).size().values
 aggregated["avgbet"] = aggregated["coinin"] / aggregated["numgames"]
 
 # Save the new DataFrame to a CSV file
-output_path = "Data/Merged_By_Date_MachineID.csv"
+output_path = "Data/Merged_By_Date_MachineID_Active.csv"
 aggregated.to_csv(output_path, index=False)
 
 print(f"Aggregated data saved to {output_path}")

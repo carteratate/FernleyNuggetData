@@ -61,6 +61,7 @@ def createMachines():
     machines = clean_cols(machines)
 
     machines = machines.rename(columns={
+        machines.columns[0]: "id", 
         machines.columns[2]: "name",
         machines.columns[6]: "asset",
         machines.columns[9]: "removedate",
@@ -76,15 +77,17 @@ def createMachines():
     # Prepare machine id for join
     machines["clientid"] = pd.to_numeric(machines["raw_clientid"], errors="coerce") - 512100000000
     machines = machines.dropna(subset=["clientid"])
+    machines = machines.dropna(subset=["id"])
 
     # Drop machines with a remove date
     machines = machines[machines["removedate"].isnull()]
     
     print(machines["clientid"].duplicated().sum())  # Should be 0
+    print(machines["id"].duplicated().sum())  # Should be 0
 
     # Keep only desired columns
     machines = machines[[
-        "name", "asset", "removedate", "multidenom", "multigame",
+        "id", "name", "asset", "removedate", "multidenom", "multigame",
         "clientid", "holdpct", "paybackpct", "x", "y"
     ]]
 
@@ -95,11 +98,11 @@ def createMerged(sessions, machines):
     merged = sessions.merge(
         machines,
         left_on="machineid",
-        right_on="clientid",
+        right_on="id",
         how="left"
     )
 
-    unmatched = merged[merged["clientid"].isnull()]
+    unmatched = merged[merged["id"].isnull()]
     print(f"Unmatched rows: {len(unmatched)}")
 
     return merged
@@ -110,4 +113,4 @@ machines = createMachines()
 merged = createMerged(sessions, machines)
 
 
-merged.to_csv("Data/big_data_merge_one.csv", index=False)
+merged.to_csv("Data/bigdata_merge_active.csv", index=False)
