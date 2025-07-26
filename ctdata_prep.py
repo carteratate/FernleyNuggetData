@@ -82,7 +82,7 @@ def createMerged(sessions, machines):
     )
 
     unmatched = merged[merged["serial"].isnull()]
-    print(f"Unmatched rows: {len(unmatched)}")
+    # print(f"Unmatched rows: {len(unmatched)}")
 
     return merged
 
