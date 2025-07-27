@@ -148,7 +148,7 @@ merged['multidenom_flag'] = merged['multidenom'].apply(lambda x: 0 if x == 'n' o
 # merged["maxbet"] = merged["maxbet"].apply(lambda x: x / 100 if x > 100 else x)
 
 # Remove unnecessary columns
-merged = merged.drop(columns=["date", "gamesplayed", "asset", "theme", "multidenom", "maxbet", "isprogressive", "vendor", "serial", "x_coord", 
+merged = merged.drop(columns=["date", "denom", "gamesplayed", "asset", "theme", "multidenom", "maxbet", "isprogressive", "vendor", "serial", "x_coord", 
                               "y_coord", "coinout", "total_coinin", "count_coinin"])
 
 print(merged["coinin"].describe())
