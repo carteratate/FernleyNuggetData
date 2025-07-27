@@ -54,8 +54,8 @@ final_labels[is_at_bar] = 0                      # Cluster 0: bar machines
 final_labels[~is_at_bar] = other_labels + 1      # Clusters 1 to k_total-1
 
 # === Plot the results using modern colormap API ===
-base_cmap = plt.colormaps.get_cmap('tab20')  # ✅ Modern API
-colors = base_cmap(np.linspace(0, 1, k_total))  # ✅ Custom spacing of colors
+base_cmap = plt.colormaps.get_cmap('tab20')  
+colors = base_cmap(np.linspace(0, 1, k_total))   
 
 plt.figure(figsize=(7, 6))
 for cluster_id in range(k_total):
