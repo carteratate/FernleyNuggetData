@@ -1,4 +1,9 @@
+import argparse
 from bigdata_prep import create_sessions, create_machines, create_merged
+
+parser = argparse.ArgumentParser(description="Merge bigdata by date and machine")
+parser.add_argument("--output", default="Data/Merged_By_Date_MachineID_Active.csv", help="Output merged CSV")
+args = parser.parse_args()
 
 sessions = create_sessions()
 machines = create_machines()
@@ -29,7 +34,6 @@ aggregated["numsessions"] = merged.groupby(["date", "machineid"]).size().values
 aggregated["avgbet"] = aggregated["coinin"] / aggregated["numgames"]
 
 # Save the new DataFrame to a CSV file
-output_path = "Data/Merged_By_Date_MachineID_Active.csv"
-aggregated.to_csv(output_path, index=False)
+aggregated.to_csv(args.output, index=False)
 
-print(f"Aggregated data saved to {output_path}")
+print(f"Aggregated data saved to {args.output}")

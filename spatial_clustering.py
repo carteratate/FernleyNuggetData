@@ -1,9 +1,15 @@
+import argparse
 from ctdata_prep import create_sessions, create_machines, create_merged
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
+
+parser = argparse.ArgumentParser(description="Cluster slot machine coordinates")
+parser.add_argument("--coord-output", default="Data/clustered_coordinates.csv", help="Output CSV for coordinates with clusters")
+parser.add_argument("--merged-output", default="Data/merged_with_clusters.csv", help="Output CSV for merged data with clusters")
+args = parser.parse_args()
 
 # === STEP 1: Load Coordinates Data ===
 sessions = create_sessions()
@@ -82,6 +88,6 @@ coord_merged = coord_merged[['x', 'y', 'cluster_id']]
 merged = merged.merge(coord_merged[['x', 'y', 'cluster_id']], on=['x', 'y'], how='left')
 
 # === Save both coord_merged and merged DataFrames to CSV ===
-coord_merged.to_csv("Data/clustered_coordinates.csv", index=False)
-merged.to_csv("Data/merged_with_clusters.csv", index=False)
+coord_merged.to_csv(args.coord_output, index=False)
+merged.to_csv(args.merged_output, index=False)
 

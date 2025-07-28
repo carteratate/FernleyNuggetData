@@ -1,9 +1,18 @@
+import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import random
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
+
+parser = argparse.ArgumentParser(description="Simulated annealing layout optimizer")
+parser.add_argument("--features", default="Data/features.csv", help="Training feature CSV")
+parser.add_argument("--future-layout", default="Data/future_month_layout.csv", help="Input future layout CSV")
+parser.add_argument("--cluster-coords", default="Data/clustered_coordinates.csv", help="Cluster coordinates CSV")
+parser.add_argument("--original-output", default="Data/original_layout_with_predictions.csv", help="Output CSV for initial predictions")
+parser.add_argument("--optimized-output", default="Data/optimized_layout.csv", help="Output CSV for optimized layout")
+args = parser.parse_args()
 
 # === Helper to assign spatial features (based on updated positions) ===
 def assign_spatial_features(df):
@@ -85,17 +94,17 @@ def simulated_annealing(df, model, iterations=1000, swaps_per_iter=10, temp=1.0,
 # === MAIN EXECUTION ===
 
 # Load training data and model
-train_df = pd.read_csv("Data/features.csv")
+train_df = pd.read_csv(args.features)
 y = train_df["coinin"]
 X = train_df.drop(columns=["coinin"])
 model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
 model.fit(X, y)
 
 # Load future layout
-future_df = pd.read_csv("Data/future_month_layout.csv")
+future_df = pd.read_csv(args.future_layout)
 
 # Merge in cluster_id (ensure no suffixes)
-clustered_coords = pd.read_csv("Data/clustered_coordinates.csv")
+clustered_coords = pd.read_csv(args.cluster_coords)
 if "cluster_id" in future_df.columns:
     future_df = future_df.drop(columns=["cluster_id"])
 future_df = future_df.merge(clustered_coords, on=["x", "y"], how="left")
@@ -108,12 +117,12 @@ future_df = assign_spatial_features(future_df)
 future_df["coinin"] = predict_total_coinin(future_df, model)
 
 # Save original layout to CSV
-future_df.to_csv("Data/original_layout_with_predictions.csv", index=False)
+future_df.to_csv(args.original_output, index=False)
 
 # === Store original total for plotting ===
 original_total = future_df["coinin"].sum()
 
-future_df.to_csv("Data/original_layout_with_predictions.csv", index=False)
+future_df.to_csv(args.original_output, index=False)
 
 # Run simulated annealing
 optimized_df, original_total, optimized_total = simulated_annealing(
@@ -151,7 +160,7 @@ plt.tight_layout()
 plt.show()
 
 # Save final layout
-optimized_df.to_csv("Data/optimized_layout.csv", index=False)
-print(f"\nSaved optimized layout to Data/optimized_layout.csv")
+optimized_df.to_csv(args.optimized_output, index=False)
+print(f"\nSaved optimized layout to {args.optimized_output}")
 print(f"Original total predicted coin-in: ${original_total:,.2f}")
 print(f"Optimized total predicted coin-in: ${optimized_total:,.2f}")

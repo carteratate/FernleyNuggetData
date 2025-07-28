@@ -1,9 +1,15 @@
+import argparse
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-# === STEP 1: Load full dataset ===
-df = pd.read_csv("Data/features.csv")
+# === STEP 1: Parse args and load full dataset ===
+parser = argparse.ArgumentParser(description="Extend features for next month")
+parser.add_argument("--features", default="Data/features.csv", help="Input features CSV")
+parser.add_argument("--output", default="Data/future_month_layout.csv", help="Output future layout CSV")
+args = parser.parse_args()
+
+df = pd.read_csv(args.features)
 
 # === STEP 2: Find most recent date layout ===
 # Assumes that the most recent day is the most frequent full day across machines
@@ -64,5 +70,5 @@ for day in future_dates:
 future_df = pd.DataFrame(extended_rows)
 
 # === STEP 6: Save output ===
-future_df.to_csv("Data/future_month_layout.csv", index=False)
-print("Saved future layout to 'Data/future_month_layout.csv'")
+future_df.to_csv(args.output, index=False)
+print(f"Saved future layout to '{args.output}'")

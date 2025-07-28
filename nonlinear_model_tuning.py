@@ -102,6 +102,7 @@
 # print(f"[XGBoost] R²: {r2_score(y_test, y_pred_xgb):.4f}")
 # print(f"[XGBoost] Training Time: {(end - start)/60:.2f} minutes")
 
+import argparse
 import pandas as pd
 import numpy as np
 import time
@@ -112,8 +113,12 @@ from sklearn.ensemble import RandomForestRegressor
 import lightgbm as lgb
 import xgboost as xgb
 
+parser = argparse.ArgumentParser(description="Tune nonlinear models")
+parser.add_argument("--features", default="Data/features.csv", help="Feature CSV")
+args = parser.parse_args()
+
 # === STEP 1: Load your features ===
-df = pd.read_csv("Data/features.csv")
+df = pd.read_csv(args.features)
 
 # === STEP 2: Define target and features ===
 y = df["coinin"]

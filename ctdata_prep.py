@@ -1,6 +1,13 @@
+import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+
+parser = argparse.ArgumentParser(description="Clean and merge CT data")
+parser.add_argument("--sessions", default="Data/assetmeters 07-25-2025.csv", help="Sessions CSV")
+parser.add_argument("--machines", default="Data/TTgames00 07-25-2025.csv", help="Machines CSV")
+parser.add_argument("--output", default="Data/ctdata_amtt_merge.csv", help="Output merged CSV")
+args = parser.parse_args()
 
 
 # Clean up column names --------------------------------
@@ -15,7 +22,7 @@ def clean_cols(df):
 
 # Clean up sessions DataFrame ------------------------
 def create_sessions():
-    sessions_path = "Data/assetmeters 07-25-2025.csv"
+    sessions_path = args.sessions
 
     sessions = pd.read_csv(sessions_path)
 
@@ -47,7 +54,7 @@ def create_sessions():
 
 # Clean up machines DataFrame ------------------------
 def create_machines():
-    machines_path = "Data/TTgames00 07-25-2025.csv"
+    machines_path = args.machines
 
     machines = pd.read_csv(machines_path)
 
@@ -91,4 +98,4 @@ machines = create_machines()
 
 merged = create_merged(sessions, machines)
 
-merged.to_csv("Data/ctdata_amtt_merge.csv", index=False)
+merged.to_csv(args.output, index=False)

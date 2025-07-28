@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -5,6 +6,15 @@ import random
 from sklearn.ensemble import RandomForestRegressor
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing
+
+parser = argparse.ArgumentParser(description="Greedy layout optimizer")
+parser.add_argument("--features", default="Data/features.csv", help="Training feature CSV")
+parser.add_argument("--future-layout", default="Data/future_month_layout.csv", help="Input future layout CSV")
+parser.add_argument("--cluster-coords", default="Data/clustered_coordinates.csv", help="Cluster coordinates CSV")
+parser.add_argument("--original-output", default="Data/original_layout_with_predictions.csv", help="Output CSV for initial predictions")
+parser.add_argument("--swap-log", default="Data/swap_log.csv", help="CSV to record swap log")
+parser.add_argument("--optimized-output", default="Data/optimized_layout_greedy.csv", help="Output CSV for optimized layout")
+args = parser.parse_args()
 
 # === Helper to assign spatial features ===
 def assign_spatial_features(df):
@@ -106,20 +116,20 @@ def greedy_swap_optimizer(df, model, max_swaps=10, min_gain_threshold=25, log_ev
 
 # === MAIN ===
 if __name__ == "__main__":
-    train_df = pd.read_csv("Data/features.csv")
+    train_df = pd.read_csv(args.features)
     y = train_df["coinin"]
     X = train_df.drop(columns=["coinin"])
     model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
     model.fit(X, y)
 
-    future_df = pd.read_csv("Data/future_month_layout.csv")
-    clustered_coords = pd.read_csv("Data/clustered_coordinates.csv")
+    future_df = pd.read_csv(args.future_layout)
+    clustered_coords = pd.read_csv(args.cluster_coords)
     if "cluster_id" in future_df.columns:
         future_df = future_df.drop(columns=["cluster_id"])
     future_df = future_df.merge(clustered_coords, on=["x", "y"], how="left")
     future_df = assign_spatial_features(future_df)
     future_df["coinin"] = predict_total_coinin(future_df, model)
-    future_df.to_csv("Data/original_layout_with_predictions.csv", index=False)
+    future_df.to_csv(args.original_output, index=False)
     original_total = future_df["coinin"].sum()
     original_coinin_per_machine = future_df[["x", "y", "coinin"]].copy()
 
@@ -130,7 +140,7 @@ if __name__ == "__main__":
     optimized_total = optimized_df["coinin"].sum()
 
     # === Save top swaps ===
-    pd.DataFrame(swap_log).to_csv("Data/swap_log.csv", index=False)
+    pd.DataFrame(swap_log).to_csv(args.swap_log, index=False)
 
     # === Heatmap: Swap frequency ===
     swap_freq = pd.Series(swap_counts).rename("count")
@@ -175,7 +185,7 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.show()
 
-    optimized_df.to_csv("Data/optimized_layout_greedy.csv", index=False)
-    print(f"\nSaved optimized layout to Data/optimized_layout_greedy.csv")
+    optimized_df.to_csv(args.optimized_output, index=False)
+    print(f"\nSaved optimized layout to {args.optimized_output}")
     print(f"Original total predicted coin-in: ${original_total:,.2f}")
     print(f"Optimized total predicted coin-in: ${optimized_total:,.2f}")

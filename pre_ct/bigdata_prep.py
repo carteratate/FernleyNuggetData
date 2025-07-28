@@ -1,6 +1,13 @@
+import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+
+parser = argparse.ArgumentParser(description="Prepare bigdata sessions and machines")
+parser.add_argument("--sessions", default="Data/BigData7_24_25.csv", help="Sessions CSV")
+parser.add_argument("--machines", default="Data/SlotsOnFloor.csv", help="Machines CSV")
+parser.add_argument("--output", default="Data/bigdata_merge_active.csv", help="Merged output CSV")
+args = parser.parse_args()
 
 
 # Clean up column names --------------------------------
@@ -15,7 +22,7 @@ def clean_cols(df):
 
 # Clean up sessions DataFrame ------------------------
 def create_sessions():
-    sessions_path = "Data/BigData7_24_25.csv"
+    sessions_path = args.sessions
 
     sessions = pd.read_csv(sessions_path)
 
@@ -54,7 +61,7 @@ def create_sessions():
 
 # Clean up machines DataFrame ------------------------
 def create_machines():
-    machines_path = "Data/SlotsOnFloor.csv"
+    machines_path = args.machines
 
     machines = pd.read_csv(machines_path)
 
@@ -113,4 +120,4 @@ machines = create_machines()
 merged = create_merged(sessions, machines)
 
 
-merged.to_csv("Data/bigdata_merge_active.csv", index=False)
+merged.to_csv(args.output, index=False)
