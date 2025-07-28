@@ -49,7 +49,7 @@ for seed in seeds:
 
     # === LightGBM ===
     # lgb = LGBMRegressor(n_estimators=100, random_state=42)
-    # Best performaing LGBM parameters from tuning
+    # Best performing LGBM parameters from tuning
     lgb = LGBMRegressor(
         subsample=0.8,
         n_estimators=500,
