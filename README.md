@@ -1,4 +1,12 @@
 # Fernley Nugget Data Project
+## Installation
+
+Install the required packages using pip:
+
+```bash
+pip install -r requirements.txt
+```
+
 
 ## SHAP Analysis
 
