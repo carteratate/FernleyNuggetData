@@ -46,9 +46,6 @@ def greedy_swap_optimizer(df, model, max_swaps=10, min_gain_threshold=25, log_ev
     current_df["coinin"] = predict_total_coinin(current_df, model)
     current_total = current_df["coinin"].sum()
 
-    bar_df = current_df[current_df["bar_slot"] == 1].copy()
-    nonbar_df = current_df[current_df["bar_slot"] == 0].copy()
-
     swaps_done = 0
     swap_log = []
     swap_counts = {idx: 0 for idx in current_df.index}
@@ -58,6 +55,10 @@ def greedy_swap_optimizer(df, model, max_swaps=10, min_gain_threshold=25, log_ev
     while swaps_done < max_swaps:
         if swaps_done % log_every == 0:
             print(f"\n--- Swap Round {swaps_done + 1} ---")
+
+        # Recompute bar and non-bar machine sets after every swap
+        bar_df = current_df[current_df["bar_slot"] == 1]
+        nonbar_df = current_df[current_df["bar_slot"] == 0]
 
         candidate_args = []
         for idx_a in nonbar_df.index:
