@@ -15,7 +15,13 @@ rf.fit(X_train, y_train)
 
 # === STEP 3: Load future month layout ===
 df_future = pd.read_csv("Data/future_month_layout.csv")
-X_future = df_future.drop(columns=["coinin"])
+# Some future layouts may not already contain a ``coinin`` column.  In that
+# case we simply use the DataFrame as-is when generating features.  Attempting
+# to drop a missing column would raise a ``KeyError``.
+if "coinin" in df_future.columns:
+    X_future = df_future.drop(columns=["coinin"])
+else:
+    X_future = df_future.copy()
 print("Predicting coin-in for future month layout...")
 df_future["coinin"] = rf.predict(X_future)
 
