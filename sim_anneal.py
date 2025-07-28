@@ -6,6 +6,7 @@ import random
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
+from utils import assign_spatial_features
 parser = argparse.ArgumentParser(description="Simulated annealing layout optimizer")
 parser.add_argument("--features", default="Data/features.csv", help="Training feature CSV")
 parser.add_argument("--future-layout", default="Data/future_month_layout.csv", help="Input future layout CSV")
@@ -15,27 +16,6 @@ parser.add_argument("--optimized-output", default="Data/optimized_layout.csv", h
 args = parser.parse_args()
 
 # === Helper to assign spatial features (based on updated positions) ===
-def assign_spatial_features(df):
-    # Recalculate all spatial features after swaps
-    df["bar_slot"] = ((df["y"] < 20) & (df["x"] > 30)).astype(int)
-    df["near_bar"] = (
-        ((df["x"] > 15) & (df["x"] < 30) & (df["y"] < 20)) |
-        ((df["x"] > 30) & (df["y"] > 20) & (df["y"] < 40))
-    ).astype(int)
-    df["near_main_door"] = (
-        ((df["x"] < 12) & (df["y"] < 18)) |
-        ((df["y"] < 12) & (df["x"] < 25))
-    ).astype(int)
-    df["near_back_door"] = (
-        ((df["x"] > 10) & (df["x"] < 50) & (df["y"] > 70))
-    ).astype(int)
-
-    # Add cluster_id one-hot columns
-    for cid in range(13):
-        df[f"is_cluster{cid}"] = (df["cluster_id"] == cid).astype(int)
-
-    return df
-
 # === Helper to predict coin-in ===
 def predict_total_coinin(df, model):
     features = df[model.feature_names_in_]
@@ -164,3 +144,4 @@ optimized_df.to_csv(args.optimized_output, index=False)
 print(f"\nSaved optimized layout to {args.optimized_output}")
 print(f"Original total predicted coin-in: ${original_total:,.2f}")
 print(f"Optimized total predicted coin-in: ${optimized_total:,.2f}")
+

@@ -6,6 +6,7 @@ import random
 from sklearn.ensemble import RandomForestRegressor
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing
+from utils import assign_spatial_features
 
 parser = argparse.ArgumentParser(description="Greedy layout optimizer")
 parser.add_argument("--features", default="Data/features.csv", help="Training feature CSV")
@@ -15,24 +16,6 @@ parser.add_argument("--original-output", default="Data/original_layout_with_pred
 parser.add_argument("--swap-log", default="Data/swap_log.csv", help="CSV to record swap log")
 parser.add_argument("--optimized-output", default="Data/optimized_layout_greedy.csv", help="Output CSV for optimized layout")
 args = parser.parse_args()
-
-# === Helper to assign spatial features ===
-def assign_spatial_features(df):
-    df["bar_slot"] = ((df["y"] < 20) & (df["x"] > 30)).astype(int)
-    df["near_bar"] = (
-        ((df["x"] > 15) & (df["x"] < 30) & (df["y"] < 20)) |
-        ((df["x"] > 30) & (df["y"] > 20) & (df["y"] < 40))
-    ).astype(int)
-    df["near_main_door"] = (
-        ((df["x"] < 12) & (df["y"] < 18)) |
-        ((df["y"] < 12) & (df["x"] < 25))
-    ).astype(int)
-    df["near_back_door"] = (
-        ((df["x"] > 10) & (df["x"] < 50) & (df["y"] > 70))
-    ).astype(int)
-    for cid in range(13):
-        df[f"is_cluster{cid}"] = (df["cluster_id"] == cid).astype(int)
-    return df
 
 # === Coin-in prediction ===
 def predict_total_coinin(df, model):
