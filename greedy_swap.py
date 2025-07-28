@@ -10,7 +10,7 @@ from utils import assign_spatial_features
 
 parser = argparse.ArgumentParser(description="Greedy layout optimizer")
 parser.add_argument("--features", default="Data/features.csv", help="Training feature CSV")
-parser.add_argument("--future-layout", default="Data/future_month_layout.csv", help="Input future layout CSV")
+parser.add_argument("--future-layout", default="Data/future_month_testdata.csv", help="Input future layout CSV")
 parser.add_argument("--cluster-coords", default="Data/clustered_coordinates.csv", help="Cluster coordinates CSV")
 parser.add_argument("--original-output", default="Data/original_layout_with_predictions.csv", help="Output CSV for initial predictions")
 parser.add_argument("--swap-log", default="Data/swap_log.csv", help="CSV to record swap log")

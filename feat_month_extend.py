@@ -6,24 +6,19 @@ from datetime import datetime, timedelta
 # === STEP 1: Parse args and load full dataset ===
 parser = argparse.ArgumentParser(description="Extend features for next month")
 parser.add_argument("--features", default="Data/features.csv", help="Input features CSV")
-parser.add_argument("--output", default="Data/future_month_layout.csv", help="Output future layout CSV")
+parser.add_argument("--output", default="Data/future_month_testdata.csv", help="Output future layout CSV")
 args = parser.parse_args()
 
 df = pd.read_csv(args.features)
 
-# === STEP 2: Find most recent date layout ===
-# Assumes that the most recent day is the most frequent full day across machines
-# You MUST have a way to track the actual date in the original dataset for this to be exact
-# For now, let's assume you can identify the most recent layout by a specific week or logic (e.g., most recent year/month/day_of_week)
-
-# Heuristic: take the most frequent combo of year/month/day_of_week
-most_recent_mask = df[
-    (df["is_2025"] == 1) & (df["month"] == df[df["is_2025"] == 1]["month"].max())
+# === STEP 2: Find the layout for July 2025 on a Thursday ===
+# Filter rows where is_2025 == 1, is_July == 1, and is_Thursday == 1
+specific_date_mask = df[
+    (df["is_2025"] == 1) & (df["is_July"] == 1) & (df["is_thursday"] == 1)
 ]
-# You can tighten this up if you have actual date columns
 
 # Drop duplicates to get machine-level layout (assumes one row per machine per day)
-latest_layout = most_recent_mask.drop_duplicates(subset=["x", "y"])
+latest_layout = specific_date_mask.drop_duplicates(subset=["x", "y"])
 
 # === STEP 3: Build next month's dates ===
 start_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -66,9 +61,27 @@ for day in future_dates:
 
         extended_rows.append(new_row)
 
-# === STEP 5: Assemble into new DataFrame ===
-future_df = pd.DataFrame(extended_rows)
-
-# === STEP 6: Save output ===
-future_df.to_csv(args.output, index=False)
+# === STEP 5: Save the full feature set ===
+future_df = pd.DataFrame(extended_rows)  # Convert extended rows to a DataFrame
+future_df.to_csv(args.output, index=False)  # Save full feature set
 print(f"Saved future layout to '{args.output}'")
+
+
+# === STEP 6: Generate machine layout ===
+# Dynamically determine theme columns based on their position in the DataFrame
+theme_columns = future_df.iloc[:, 50:184].columns.tolist()  
+
+# Extract x, y, and the theme where is_theme is true
+machine_layout = future_df.loc[:, ["x", "y"] + theme_columns]
+
+# Find the theme where is_theme is true for each machine
+machine_layout["theme"] = machine_layout[theme_columns].idxmax(axis=1).str.replace("is_", "")
+
+# Drop duplicates to ensure only one machine per x, y location
+machine_layout = machine_layout.drop_duplicates(subset=["x", "y"])
+
+# Drop the theme flag columns to keep only x, y, and theme
+machine_layout = machine_layout.loc[:, ["x", "y", "theme"]]
+
+# Save the machine layout to a separate CSV file
+machine_layout.to_csv("Data/future_month_layout.csv", index=False)
