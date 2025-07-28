@@ -43,4 +43,12 @@ def drawTotalCoinInHeatMap():
     plt.tight_layout()
     plt.show()
 
-drawTotalCoinInHeatMap()
+
+def main() -> None:
+    """Generate and display the heatmap."""
+
+    drawTotalCoinInHeatMap()
+
+
+if __name__ == "__main__":
+    main()

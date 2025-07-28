@@ -107,10 +107,17 @@ def createMerged(sessions, machines):
 
     return merged
 
-sessions = createSessions()
-machines = createMachines()
 
-merged = createMerged(sessions, machines)
+def main() -> None:
+    """Merge sessions and machine data and save to CSV."""
+
+    sessions = createSessions()
+    machines = createMachines()
+
+    merged = createMerged(sessions, machines)
+
+    merged.to_csv("Data/bigdata_merge_active.csv", index=False)
 
 
-merged.to_csv("Data/bigdata_merge_active.csv", index=False)
+if __name__ == "__main__":
+    main()

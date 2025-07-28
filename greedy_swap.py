@@ -104,8 +104,9 @@ def greedy_swap_optimizer(df, model, max_swaps=10, min_gain_threshold=25, log_ev
 
     return current_df, swap_log, swap_counts
 
-# === MAIN ===
-if __name__ == "__main__":
+def main() -> None:
+    """Run the greedy swap optimization workflow."""
+
     train_df = pd.read_csv("Data/features.csv")
     y = train_df["coinin"]
     X = train_df.drop(columns=["coinin"])
@@ -179,3 +180,7 @@ if __name__ == "__main__":
     print(f"\nSaved optimized layout to Data/optimized_layout_greedy.csv")
     print(f"Original total predicted coin-in: ${original_total:,.2f}")
     print(f"Optimized total predicted coin-in: ${optimized_total:,.2f}")
+
+
+if __name__ == "__main__":
+    main()
