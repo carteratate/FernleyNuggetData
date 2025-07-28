@@ -140,7 +140,22 @@ plt.tight_layout()
 plt.show()
 
 # Save final layout
-optimized_df.to_csv(args.optimized_output, index=False)
+# Dynamically determine theme columns based on their position in the DataFrame
+theme_columns = optimized_df.iloc[:, 50:184].columns.tolist()  
+
+# Extract x, y, and the theme where is_theme is true
+machine_layout = optimized_df.loc[:, ["x", "y"] + theme_columns]
+
+# Find the theme where is_theme is true for each machine
+machine_layout["theme"] = machine_layout[theme_columns].idxmax(axis=1).str.replace("is_", "")
+
+# Drop duplicates to ensure only one machine per x, y location
+machine_layout = machine_layout.drop_duplicates(subset=["x", "y"])
+
+# Drop the theme flag columns to keep only x, y, and theme
+machine_layout = machine_layout.loc[:, ["x", "y", "theme"]]
+
+machine_layout.to_csv(args.optimized_output, index=False)
 print(f"\nSaved optimized layout to {args.optimized_output}")
 print(f"Original total predicted coin-in: ${original_total:,.2f}")
 print(f"Optimized total predicted coin-in: ${optimized_total:,.2f}")
