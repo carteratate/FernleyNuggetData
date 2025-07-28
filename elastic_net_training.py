@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 from sklearn.linear_model import ElasticNetCV
 from sklearn.model_selection import train_test_split
@@ -7,8 +8,12 @@ import numpy as np
 from sklearn.linear_model import RidgeCV
 from sklearn.ensemble import RandomForestRegressor
 
+parser = argparse.ArgumentParser(description="Elastic net training script")
+parser.add_argument("--features", default="Data/features.csv", help="Feature CSV")
+args = parser.parse_args()
+
 # === STEP 1: Load your features ===
-df = pd.read_csv("Data/features.csv")
+df = pd.read_csv(args.features)
 
 # === STEP 2: Define target and features ===
 # You are predicting coinin

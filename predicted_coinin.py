@@ -1,10 +1,16 @@
+import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
 
-# === STEP 1: Load training data ===
-df_train = pd.read_csv("Data/features.csv")
+# === STEP 1: Parse arguments and load training data ===
+parser = argparse.ArgumentParser(description="Predict coin-in for a future month")
+parser.add_argument("--features", default="Data/features.csv", help="Path to training feature CSV")
+parser.add_argument("--future-layout", default="Data/future_month_layout.csv", help="Path to future layout CSV")
+args = parser.parse_args()
+
+df_train = pd.read_csv(args.features)
 y_train = df_train["coinin"]
 X_train = df_train.drop(columns=["coinin"])
 
@@ -14,7 +20,7 @@ print("Training Random Forest Regressor on all data...")
 rf.fit(X_train, y_train)
 
 # === STEP 3: Load future month layout ===
-df_future = pd.read_csv("Data/future_month_layout.csv")
+df_future = pd.read_csv(args.future_layout)
 # Some future layouts may not already contain a ``coinin`` column.  In that
 # case we simply use the DataFrame as-is when generating features.  Attempting
 # to drop a missing column would raise a ``KeyError``.

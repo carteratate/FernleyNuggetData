@@ -1,6 +1,12 @@
+import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+
+parser = argparse.ArgumentParser(description="Prepare Player One data")
+parser.add_argument("--sessions", default="Data/PlayerOne.csv", help="Player sessions CSV")
+parser.add_argument("--machines", default="Data/SlotsOnFloor.csv", help="Machines CSV")
+args = parser.parse_args()
 
 
 # Clean up column names --------------------------------
@@ -15,7 +21,7 @@ def clean_cols(df):
 
 # Clean up sessions DataFrame ------------------------
 def create_sessions():
-    sessions_path = "Data/PlayerOne.csv"
+    sessions_path = args.sessions
 
     sessions = pd.read_csv(sessions_path)
 
@@ -50,7 +56,7 @@ def create_sessions():
 
 # Clean up machines DataFrame ------------------------
 def create_machines():
-    machines_path = "Data/SlotsOnFloor.csv"
+    machines_path = args.machines
 
     machines = pd.read_csv(machines_path)
 

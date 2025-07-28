@@ -6,15 +6,23 @@ Usage:
     python merge_playerone.py
 """
 
+import argparse
 from pathlib import Path
 import re
 import pandas as pd
 
+parser = argparse.ArgumentParser(description="Merge PlayerOne Excel files")
+parser.add_argument("--data-dir", default="Data", help="Directory containing PlayerOne Excel files")
+parser.add_argument("--output", default="Data/PlayerOne.csv", help="Output CSV file")
+parser.add_argument("--glob", default="PlayerOne*.xlsx", help="Glob pattern for Excel files")
+parser.add_argument("--add-source-col", action="store_true", help="Add source file column", default=True)
+args = parser.parse_args()
+
 # ---------- configuration ----------
-DATA_DIR = Path("Data")          # folder where the Excel files live
-GLOB_PATTERN = "PlayerOne*.xlsx" # pattern to match
-OUTPUT_FILE = DATA_DIR / "PlayerOne.csv"
-ADD_SOURCE_COL = True            # set False if you don’t want the source_file column
+DATA_DIR = Path(args.data_dir)
+GLOB_PATTERN = args.glob
+OUTPUT_FILE = Path(args.output)
+ADD_SOURCE_COL = args.add_source_col
 # -----------------------------------
 
 def numeric_key(path_obj: Path) -> int:

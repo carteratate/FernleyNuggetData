@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -5,8 +6,12 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
+parser = argparse.ArgumentParser(description="Random forest training script")
+parser.add_argument("--features", default="Data/features.csv", help="Input feature CSV")
+args = parser.parse_args()
+
 # === STEP 1: Load features ===
-df = pd.read_csv("Data/features.csv")
+df = pd.read_csv(args.features)
 y = df["coinin"]
 X = df.drop(columns=["coinin"])
 

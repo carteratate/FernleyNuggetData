@@ -1,9 +1,13 @@
+import argparse
 import pandas as pd
 import datetime
 
-merged_path = "Data/merged_with_clusters.csv"
+parser = argparse.ArgumentParser(description="Generate machine learning features")
+parser.add_argument("--input", default="Data/merged_with_clusters.csv", help="Merged input CSV")
+parser.add_argument("--output", default="Data/features.csv", help="Output features CSV")
+args = parser.parse_args()
 
-merged = pd.read_csv(merged_path)
+merged = pd.read_csv(args.input)
 
 
 # DATE BASED FEATURES
@@ -154,4 +158,4 @@ merged = merged.drop(columns=["date", "denom", "gamesplayed", "asset", "theme", 
 print(merged["coinin"].describe())
 
 # Save the updated DataFrame back to a CSV file
-merged.to_csv("Data/features.csv", index=False)
+merged.to_csv(args.output, index=False)

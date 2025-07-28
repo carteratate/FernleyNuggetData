@@ -1,14 +1,19 @@
+import argparse
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 import shap
 import matplotlib.pyplot as plt
 
+parser = argparse.ArgumentParser(description="SHAP analysis for RandomForest")
+parser.add_argument("--features", default="Data/features.csv", help="Features CSV")
+args = parser.parse_args()
+
 # === STEP 1: Load training features ===
 # Same loading approach as rf_training.py lines 8-11
 # which read the engineered feature set written by feat_create.py
 # at lines 146-157.
-df = pd.read_csv("Data/features.csv")
+df = pd.read_csv(args.features)
 y = df["coinin"]
 X = df.drop(columns=["coinin"])
 

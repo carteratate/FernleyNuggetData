@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,8 +8,12 @@ from sklearn.ensemble import RandomForestRegressor
 from lightgbm import LGBMRegressor
 from xgboost import XGBRegressor
 
+parser = argparse.ArgumentParser(description="Train multiple nonlinear models")
+parser.add_argument("--features", default="Data/features.csv", help="Input feature CSV")
+args = parser.parse_args()
+
 # === STEP 1: Load your features ===
-df = pd.read_csv("Data/features.csv")
+df = pd.read_csv(args.features)
 
 # === STEP 2: Define target and features ===
 y = df["coinin"]
