@@ -1,35 +1,58 @@
 import argparse
-from ctdata_prep import create_sessions, create_machines, create_merged
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
+from utils import create_sessions, create_machines, create_merged
 
 parser = argparse.ArgumentParser(description="Cluster slot machine coordinates")
 parser.add_argument("--coord-output", default="Data/clustered_coordinates.csv", help="Output CSV for coordinates with clusters")
 parser.add_argument("--merged-output", default="Data/merged_with_clusters.csv", help="Output CSV for merged data with clusters")
 args = parser.parse_args()
 
-# === STEP 1: Load Coordinates Data ===
-sessions = create_sessions()
-machines = create_machines()
-merged = create_merged(sessions, machines)
+session_map = {
+    1: "asset",
+    5: "vendor",
+    6: "theme",
+    12: "isprogressive",
+    13: "holdpct",
+    14: "denom",
+    17: "x",
+    18: "y",
+    21: "time",
+    24: "coinin",
+    25: "coinout",
+    28: "gamesplayed",
+}
 
-# Extract coordinates (X, Y) from the DataFrame
+machine_map = {
+    13: "serial",
+    24: "multidenom",
+    27: "maxbet",
+    52: "x_coord",
+    53: "y_coord",
+}
+
+sessions = create_sessions("Data/assetmeters 07-25-2025.csv", rename_map=session_map)
+sessions = sessions[[
+    "asset", "vendor", "theme", "isprogressive", "holdpct", "denom",
+    "x", "y", "time", "coinin", "coinout", "gamesplayed",
+]]
+machines = create_machines("Data/TTgames00 07-25-2025.csv", rename_map=machine_map)
+machines = machines[["serial", "multidenom", "maxbet", "x_coord", "y_coord"]]
+merged = create_merged(sessions, machines, "asset", "serial")
+
 coord_merged = merged.drop_duplicates(subset=['x', 'y'])
 coords = coord_merged[['x', 'y']].values
 
-# === Identify bar machines ===
-is_at_bar = (coords[:, 0] > 30) & (coords[:, 1] < 20)  # x > 30 and y < 20
+is_at_bar = (coords[:, 0] > 30) & (coords[:, 1] < 20)
 bar_coords = coords[is_at_bar]
 other_coords = coords[~is_at_bar]
 
-# === Scale only the other_coords (not needed for raw visualization, but helps KMeans) ===
 scaler = StandardScaler()
 other_coords_scaled = scaler.fit_transform(other_coords)
 
-# === STEP 3: Elbow Method to Find Best K ===
 inertias = []
 K_range = range(2, 16)
 for k in K_range:
@@ -37,7 +60,6 @@ for k in K_range:
     kmeans.fit(other_coords_scaled)
     inertias.append(kmeans.inertia_)
 
-# Plot the elbow
 plt.figure(figsize=(6, 4))
 plt.plot(K_range, inertias, marker='o')
 plt.title('Elbow Method to Determine Optimal K')
@@ -47,27 +69,22 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-# === Run K-Means on non-bar machines ===
 k_total = 13
 k_kmeans = k_total - 1
-
 kmeans = KMeans(n_clusters=k_kmeans, random_state=42, n_init='auto')
 other_labels = kmeans.fit_predict(other_coords_scaled)
 
-# === Combine bar machines (cluster 0) with others (shifted by +1) ===
 final_labels = np.empty(coords.shape[0], dtype=int)
-final_labels[is_at_bar] = 0                      # Cluster 0: bar machines
-final_labels[~is_at_bar] = other_labels + 1      # Clusters 1 to k_total-1
+final_labels[is_at_bar] = 0
+final_labels[~is_at_bar] = other_labels + 1
 
-# === Plot the results using modern colormap API ===
-base_cmap = plt.colormaps.get_cmap('tab20')  
-colors = base_cmap(np.linspace(0, 1, k_total))   
+base_cmap = plt.colormaps.get_cmap('tab20')
+colors = base_cmap(np.linspace(0, 1, k_total))
 
 plt.figure(figsize=(7, 6))
 for cluster_id in range(k_total):
     cluster_points = coords[final_labels == cluster_id]
-    plt.scatter(cluster_points[:, 1], cluster_points[:, 0],
-                s=30, color=colors[cluster_id], label=f'Cluster {cluster_id}')
+    plt.scatter(cluster_points[:, 1], cluster_points[:, 0], s=30, color=colors[cluster_id], label=f'Cluster {cluster_id}')
 
 plt.title('Manual + KMeans Clustering (Top-Left Origin)')
 plt.xlabel('Y Coordinate (→ Right)')
@@ -77,17 +94,10 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-# === Add cluster labels to coord_merged DataFrame ===
 coord_merged = coord_merged.copy()
 coord_merged['cluster_id'] = final_labels
-
-# === Retain only necessary columns for coord_merged ===
 coord_merged = coord_merged[['x', 'y', 'cluster_id']]
-
-# === Add cluster_id to merged DataFrame by matching on (x, y) ===
 merged = merged.merge(coord_merged[['x', 'y', 'cluster_id']], on=['x', 'y'], how='left')
 
-# === Save both coord_merged and merged DataFrames to CSV ===
 coord_merged.to_csv(args.coord_output, index=False)
 merged.to_csv(args.merged_output, index=False)
-
