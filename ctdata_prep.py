@@ -86,9 +86,17 @@ def createMerged(sessions, machines):
 
     return merged
 
-sessions = createSessions()
-machines = createMachines()
 
-merged = createMerged(sessions, machines)
+def main() -> None:
+    """Create the merged dataset and save it to disk."""
 
-merged.to_csv("Data/ctdata_amtt_merge.csv", index=False)
+    sessions = createSessions()
+    machines = createMachines()
+
+    merged = createMerged(sessions, machines)
+
+    merged.to_csv("Data/ctdata_amtt_merge.csv", index=False)
+
+
+if __name__ == "__main__":
+    main()

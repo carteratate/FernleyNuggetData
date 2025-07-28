@@ -92,4 +92,19 @@ def createMerged(sessions, machines):
     return merged
 
 
+def main() -> None:
+    """Merge tier-one session and machine data and save to CSV."""
+
+    sessions = createSessions()
+    machines = createMachines()
+
+    merged = createMerged(sessions, machines)
+
+    merged.to_csv("Data/tier_one_merge.csv", index=False)
+
+
+if __name__ == "__main__":
+    main()
+
+
 

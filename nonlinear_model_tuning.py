@@ -209,9 +209,30 @@ xgb_param_grid = {
 }
 xgb_random = RandomizedSearchCV(xgb_model, xgb_param_grid, n_iter=50, cv=5, 
                                 verbose=2, random_state=42, n_jobs=-1)
-xgb_random.fit(X_train, y_train)
-end = time.time()
-print("Best Params:", xgb_random.best_params_)
-print("Best CV R²:", xgb_random.best_score_)
-evaluate_model("XGBoost Tuned", xgb_random.best_estimator_, X_test, y_test)
-print(f"Training Time: {(end - start)/60:.2f} minutes")
+def main() -> None:
+    """Example hyperparameter tuning routine."""
+
+    start = time.time()
+    xgb_model = xgb.XGBRegressor(random_state=42, verbosity=0)
+    xgb_param_grid = {
+        "n_estimators": [100, 200, 500],
+        "max_depth": [3, 6, 10],
+        "learning_rate": [0.01, 0.05, 0.1],
+        "subsample": [0.6, 0.8, 1.0],
+        "colsample_bytree": [0.6, 0.8, 1.0],
+        "gamma": [0, 0.1, 0.2],
+    }
+    xgb_random = RandomizedSearchCV(
+        xgb_model, xgb_param_grid, n_iter=50, cv=5, verbose=2, random_state=42, n_jobs=-1
+    )
+    xgb_random.fit(X_train, y_train)
+    end = time.time()
+    print("Best Params:", xgb_random.best_params_)
+    print("Best CV R²:", xgb_random.best_score_)
+    evaluate_model("XGBoost Tuned", xgb_random.best_estimator_, X_test, y_test)
+    print(f"Training Time: {(end - start)/60:.2f} minutes")
+
+
+if __name__ == "__main__":
+    main()
+

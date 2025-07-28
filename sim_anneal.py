@@ -84,74 +84,81 @@ def simulated_annealing(df, model, iterations=1000, swaps_per_iter=10, temp=1.0,
 
 # === MAIN EXECUTION ===
 
-# Load training data and model
-train_df = pd.read_csv("Data/features.csv")
-y = train_df["coinin"]
-X = train_df.drop(columns=["coinin"])
-model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
-model.fit(X, y)
 
-# Load future layout
-future_df = pd.read_csv("Data/future_month_layout.csv")
+def main() -> None:
+    """Run simulated annealing optimization on the layout."""
 
-# Merge in cluster_id (ensure no suffixes)
-clustered_coords = pd.read_csv("Data/clustered_coordinates.csv")
-if "cluster_id" in future_df.columns:
-    future_df = future_df.drop(columns=["cluster_id"])
-future_df = future_df.merge(clustered_coords, on=["x", "y"], how="left")
+    # Load training data and model
+    train_df = pd.read_csv("Data/features.csv")
+    y = train_df["coinin"]
+    X = train_df.drop(columns=["coinin"])
+    model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
+    model.fit(X, y)
 
-# Assign all spatial features
-future_df = assign_spatial_features(future_df)
+    # Load future layout
+    future_df = pd.read_csv("Data/future_month_layout.csv")
 
-# === Predict initial layout coin-in and save it ===
-future_df = assign_spatial_features(future_df)
-future_df["coinin"] = predict_total_coinin(future_df, model)
+    # Merge in cluster_id (ensure no suffixes)
+    clustered_coords = pd.read_csv("Data/clustered_coordinates.csv")
+    if "cluster_id" in future_df.columns:
+        future_df = future_df.drop(columns=["cluster_id"])
+    future_df = future_df.merge(clustered_coords, on=["x", "y"], how="left")
 
-# Save original layout to CSV
-future_df.to_csv("Data/original_layout_with_predictions.csv", index=False)
+    # Assign all spatial features
+    future_df = assign_spatial_features(future_df)
 
-# === Store original total for plotting ===
-original_total = future_df["coinin"].sum()
+    # === Predict initial layout coin-in and save it ===
+    future_df = assign_spatial_features(future_df)
+    future_df["coinin"] = predict_total_coinin(future_df, model)
 
-future_df.to_csv("Data/original_layout_with_predictions.csv", index=False)
+    # Save original layout to CSV
+    future_df.to_csv("Data/original_layout_with_predictions.csv", index=False)
 
-# Run simulated annealing
-optimized_df, original_total, optimized_total = simulated_annealing(
-    future_df, model, iterations=1000, swaps_per_iter=10, temp=1.0, cooling_rate=0.95
-)
+    # === Store original total for plotting ===
+    original_total = future_df["coinin"].sum()
 
-# === Heatmap of Optimized Layout ===
-agg = optimized_df.groupby(['x', 'y']).agg(total_wager=('coinin', 'sum')).reset_index()
-pivot = agg.pivot(index='x', columns='y', values='total_wager')
+    future_df.to_csv("Data/original_layout_with_predictions.csv", index=False)
+    
+    # Run simulated annealing
+    optimized_df, original_total, optimized_total = simulated_annealing(
+        future_df, model, iterations=1000, swaps_per_iter=10, temp=1.0, cooling_rate=0.95
+        )
+    
+    # === Heatmap of Optimized Layout ===
+    agg = optimized_df.groupby(['x', 'y']).agg(total_wager=('coinin', 'sum')).reset_index()
+    pivot = agg.pivot(index='x', columns='y', values='total_wager')
+    
+    plt.figure(figsize=(12, 10))
+    plt.imshow(
+        pivot,
+        origin='upper',
+        cmap='coolwarm',
+        aspect='equal',
+        vmin=0,
+        vmax=np.nanpercentile(pivot.values, 85)
+    )
+    plt.colorbar(label='Total Coin-In ($)')
+    plt.title("Optimized Casino Floor Heatmap (Predicted)")
+    plt.xlabel('Y coordinate (right)')
+    plt.ylabel('X coordinate (down)')
+    plt.xticks(ticks=np.arange(len(pivot.columns)), labels=pivot.columns)
+    plt.yticks(ticks=np.arange(len(pivot.index)), labels=pivot.index)
+    plt.tight_layout()
+    plt.show()
+    
+    # === Bar Plot: Original vs Optimized Coin-In ===
+    plt.figure(figsize=(6, 4))
+    plt.bar(["Original", "Optimized"], [original_total, optimized_total], color=["gray", "green"])
+    plt.ylabel("Total Predicted Coin-In ($)")
+    plt.title("Simulated Annealing Optimization Result")
+    plt.tight_layout()
+    plt.show()
+    
+    # Save final layout
+    optimized_df.to_csv("Data/optimized_layout.csv", index=False)
+    print(f"\nSaved optimized layout to Data/optimized_layout.csv")
+    print(f"Original total predicted coin-in: ${original_total:,.2f}")
+    print(f"Optimized total predicted coin-in: ${optimized_total:,.2f}")
 
-plt.figure(figsize=(12, 10))
-plt.imshow(
-    pivot,
-    origin='upper',
-    cmap='coolwarm',
-    aspect='equal',
-    vmin=0,
-    vmax=np.nanpercentile(pivot.values, 85)
-)
-plt.colorbar(label='Total Coin-In ($)')
-plt.title("Optimized Casino Floor Heatmap (Predicted)")
-plt.xlabel('Y coordinate (right)')
-plt.ylabel('X coordinate (down)')
-plt.xticks(ticks=np.arange(len(pivot.columns)), labels=pivot.columns)
-plt.yticks(ticks=np.arange(len(pivot.index)), labels=pivot.index)
-plt.tight_layout()
-plt.show()
-
-# === Bar Plot: Original vs Optimized Coin-In ===
-plt.figure(figsize=(6, 4))
-plt.bar(["Original", "Optimized"], [original_total, optimized_total], color=["gray", "green"])
-plt.ylabel("Total Predicted Coin-In ($)")
-plt.title("Simulated Annealing Optimization Result")
-plt.tight_layout()
-plt.show()
-
-# Save final layout
-optimized_df.to_csv("Data/optimized_layout.csv", index=False)
-print(f"\nSaved optimized layout to Data/optimized_layout.csv")
-print(f"Original total predicted coin-in: ${original_total:,.2f}")
-print(f"Optimized total predicted coin-in: ${optimized_total:,.2f}")
+if __name__ == "__main__":
+    main()
