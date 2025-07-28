@@ -14,7 +14,7 @@ def clean_cols(df):
     return df
 
 # Clean up sessions DataFrame ------------------------
-def createSessions():
+def create_sessions():
     sessions_path = "Data/assetmeters 07-25-2025.csv"
 
     sessions = pd.read_csv(sessions_path)
@@ -46,7 +46,7 @@ def createSessions():
 
 
 # Clean up machines DataFrame ------------------------
-def createMachines():
+def create_machines():
     machines_path = "Data/TTgames00 07-25-2025.csv"
 
     machines = pd.read_csv(machines_path)
@@ -69,7 +69,7 @@ def createMachines():
     return machines
 
 # Merge DataFrames -----------------------------------
-def createMerged(sessions, machines):
+def create_merged(sessions, machines):
     # Ensure both columns are of the same type
     sessions["asset"] = sessions["asset"].astype(str).str.strip()
     machines["serial"] = machines["serial"].astype(str).str.strip()
@@ -90,10 +90,10 @@ def createMerged(sessions, machines):
 def main() -> None:
     """Create the merged dataset and save it to disk."""
 
-    sessions = createSessions()
-    machines = createMachines()
+    sessions = create_sessions()
+    machines = create_machines()
 
-    merged = createMerged(sessions, machines)
+    merged = create_merged(sessions, machines)
 
     merged.to_csv("Data/ctdata_amtt_merge.csv", index=False)
 

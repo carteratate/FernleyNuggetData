@@ -14,7 +14,7 @@ def clean_cols(df):
     return df
 
 # Clean up sessions DataFrame ------------------------
-def createSessions():
+def create_sessions():
     sessions_path = "Data/PlayerOne.csv"
 
     sessions = pd.read_csv(sessions_path)
@@ -49,7 +49,7 @@ def createSessions():
 
 
 # Clean up machines DataFrame ------------------------
-def createMachines():
+def create_machines():
     machines_path = "Data/SlotsOnFloor.csv"
 
     machines = pd.read_csv(machines_path)
@@ -82,7 +82,7 @@ def createMachines():
     return machines
 
 # Merge DataFrames -----------------------------------
-def createMerged(sessions, machines):
+def create_merged(sessions, machines):
     merged = sessions.merge(
         machines,
         left_on="machineid",
@@ -95,10 +95,10 @@ def createMerged(sessions, machines):
 def main() -> None:
     """Merge tier-one session and machine data and save to CSV."""
 
-    sessions = createSessions()
-    machines = createMachines()
+    sessions = create_sessions()
+    machines = create_machines()
 
-    merged = createMerged(sessions, machines)
+    merged = create_merged(sessions, machines)
 
     merged.to_csv("Data/tier_one_merge.csv", index=False)
 

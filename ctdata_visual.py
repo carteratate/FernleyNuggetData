@@ -1,13 +1,13 @@
-from ctdata_prep import createSessions, createMachines, createMerged
+from ctdata_prep import create_sessions, create_machines, create_merged
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.ma as ma
 
 def drawTotalCoinInHeatMap():
-    sessions = createSessions()
-    machines = createMachines()
-    merged = createMerged(sessions, machines)
+    sessions = create_sessions()
+    machines = create_machines()
+    merged = create_merged(sessions, machines)
 
     # 1. Aggregate total wager per (x, y)
     agg = merged.groupby(['x', 'y']).agg(total_wager=('coinin', 'sum')).reset_index()

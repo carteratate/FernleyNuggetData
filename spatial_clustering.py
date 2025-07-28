@@ -1,18 +1,17 @@
-from ctdata_prep import createSessions, createMachines, createMerged
+from ctdata_prep import create_sessions, create_machines, create_merged
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
-
 def main() -> None:
     """Perform spatial clustering of machine coordinates."""
     
     # === STEP 1: Load Coordinates Data ===
-    sessions = createSessions()
-    machines = createMachines()
-    merged = createMerged(sessions, machines)
+    sessions = create_sessions()
+    machines = create_machines()
+    merged = create_merged(sessions, machines)
     
     # Extract coordinates (X, Y) from the DataFrame
     coord_merged = merged.drop_duplicates(subset=['x', 'y'])
