@@ -1,8 +1,8 @@
-from bigdata_prep import createSessions, createMachines, createMerged
+from bigdata_prep import create_sessions, create_machines, create_merged
 
-sessions = createSessions()
-machines = createMachines()
-merged = createMerged(sessions, machines)
+sessions = create_sessions()
+machines = create_machines()
+merged = create_merged(sessions, machines)
 
 # Group by date and machineid
 aggregated = merged.groupby(["date", "machineid"]).agg({
