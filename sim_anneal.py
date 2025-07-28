@@ -13,6 +13,7 @@ parser.add_argument("--future-layout", default="Data/future_month_testdata.csv",
 parser.add_argument("--cluster-coords", default="Data/clustered_coordinates.csv", help="Cluster coordinates CSV")
 parser.add_argument("--original-output", default="Data/original_layout_with_predictions.csv", help="Output CSV for initial predictions")
 parser.add_argument("--optimized-output", default="Data/optimized_layout.csv", help="Output CSV for optimized layout")
+parser.add_argument("--optimized-output-wPred", default="Data/optimized_layout_with_predictions.csv", help="Output CSV for optimized layout with predictions")
 args = parser.parse_args()
 
 # === Helper to assign spatial features (based on updated positions) ===
@@ -138,6 +139,10 @@ plt.ylabel("Total Predicted Coin-In ($)")
 plt.title("Simulated Annealing Optimization Result")
 plt.tight_layout()
 plt.show()
+
+# === Save optimized layout with predictions ===
+optimized_df.to_csv(args.optimized_output_wPred, index=False)
+
 
 # Save final layout
 # Dynamically determine theme columns based on their position in the DataFrame
