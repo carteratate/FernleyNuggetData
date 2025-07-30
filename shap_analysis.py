@@ -1,4 +1,7 @@
 import argparse
+import os
+import re
+
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
@@ -7,6 +10,16 @@ import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description="SHAP analysis for RandomForest")
 parser.add_argument("--features", default="Data/features.csv", help="Features CSV")
+parser.add_argument(
+    "--output-dir",
+    default="Data",
+    help="Directory where summary plots will be written",
+)
+parser.add_argument(
+    "--show",
+    action="store_true",
+    help="Display plots interactively in addition to saving",
+)
 args = parser.parse_args()
 
 # === STEP 1: Load training features ===
@@ -28,31 +41,66 @@ rf.fit(X_train, y_train)
 explainer = shap.TreeExplainer(rf)
 shap_values = explainer.shap_values(X_train)
 
-# === STEP 4: Summary plot ===
-shap.summary_plot(shap_values, X_train)
+# === STEP 4: Summary plot for all features ===
+os.makedirs(args.output_dir, exist_ok=True)
+shap.summary_plot(shap_values, X_train, show=False)
+plt.title("Overall Feature Importance")
+plt.tight_layout()
+plt.savefig(os.path.join(args.output_dir, "shap_overall.png"))
+if args.show:
+    plt.show()
+plt.close()
 
-# === STEP 5: Inspect spatial features ===
-spatial_cols = [
-    c for c in X_train.columns
-    if c in [
-        "x",
-        "y",
-        "near_main_door",
-        "near_back_door",
-        "near_bar",
-        "bar_slot",
-    ] or c.startswith("is_cluster")
-]
 
-if spatial_cols:
-    print("\nSpatial features found:", spatial_cols)
+def categorize_columns(cols):
+    """Group column names into spatial, game, and temporal categories."""
+
+    categories = {"spatial": [], "game": [], "temporal": []}
+
+    spatial_patterns = re.compile(
+        r"(^x$|^y$|_coord$|near_|door|bar|^is_cluster|cluster|bar_slot)",
+        re.IGNORECASE,
+    )
+    temporal_patterns = re.compile(
+        r"(date|day|month|year|week|^is_(?:monday|tuesday|wednesday|thursday|friday|"
+        r"saturday|sunday|weekend|january|february|march|april|may|june|july|august|"
+        r"september|october|november|december|20\d{2}))",
+        re.IGNORECASE,
+    )
+    game_patterns = re.compile(
+        r"(game|theme|denom|bet|hold|payback|asset|vendor|multidenom|multigame|"
+        r"maxbet|strength)",
+        re.IGNORECASE,
+    )
+
+    for c in cols:
+        lc = c.lower()
+        if spatial_patterns.search(lc):
+            categories["spatial"].append(c)
+        elif temporal_patterns.search(lc):
+            categories["temporal"].append(c)
+        elif game_patterns.search(lc):
+            categories["game"].append(c)
+
+    return categories
+
+
+categories = categorize_columns(X_train.columns)
+
+for name, cols in categories.items():
+    if not cols:
+        print(f"No {name} features found")
+        continue
+    print(f"\n{name.capitalize()} features found:", cols)
     shap.summary_plot(
-        shap_values[:, [X_train.columns.get_loc(c) for c in spatial_cols]],
-        X_train[spatial_cols],
+        shap_values[:, [X_train.columns.get_loc(c) for c in cols]],
+        X_train[cols],
         plot_type="bar",
         show=False,
     )
-    plt.title("Spatial Feature Importance")
-    plt.show()
-else:
-    print("No spatial features present in the dataset.")
+    plt.title(f"{name.capitalize()} Feature Importance")
+    plt.tight_layout()
+    plt.savefig(os.path.join(args.output_dir, f"shap_{name}.png"))
+    if args.show:
+        plt.show()
+    plt.close()
