@@ -4,164 +4,174 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
-
 from utils import assign_spatial_features
+
 parser = argparse.ArgumentParser(description="Simulated annealing layout optimizer")
 parser.add_argument("--features", default="Data/features.csv", help="Training feature CSV")
 parser.add_argument("--future-layout", default="Data/future_month_testdata.csv", help="Input future layout CSV")
 parser.add_argument("--cluster-coords", default="Data/clustered_coordinates.csv", help="Cluster coordinates CSV")
 parser.add_argument("--original-output", default="Data/original_layout_with_predictions.csv", help="Output CSV for initial predictions")
-parser.add_argument("--optimized-output", default="Data/optimized_layout.csv", help="Output CSV for optimized layout")
-parser.add_argument("--optimized-output-wPred", default="Data/optimized_layout_with_predictions.csv", help="Output CSV for optimized layout with predictions")
+parser.add_argument("--optimized-output", default="Data/optimized_layout_simanneal.csv", help="Output CSV for optimized layout")
+parser.add_argument("--optimized-output-wPred", default="Data/optimized_layout_with_predictions_simanneal.csv", help="Output CSV for optimized layout with predictions")
 args = parser.parse_args()
 
-# === Helper to assign spatial features (based on updated positions) ===
-# === Helper to predict coin-in ===
 def predict_total_coinin(df, model):
     features = df[model.feature_names_in_]
-    preds = model.predict(features)
-    return preds
+    return model.predict(features)
 
-# === Simulated Annealing ===
-def simulated_annealing(df, model, iterations=1000, swaps_per_iter=10, temp=1.0, cooling_rate=0.95):
+def simulated_annealing_swap_optimizer(df, model, iterations=1000, temp=1.0, cooling_rate=0.95, swaps_per_iter=1, log_every=50):
+    """
+    Simulated annealing optimizer that swaps locations for the entire month (all days) for each machine.
+    Only swaps bar machines with bar machines, and nonbar machines with nonbar machines.
+    Machines are identified by (theme, x, y).
+    """
     current_df = df.copy()
+    theme_columns = current_df.iloc[:, 50:184].columns.tolist()
+    current_df["theme"] = current_df[theme_columns].idxmax(axis=1).str.replace("is_", "")
+
+    # Drop duplicates to get one row per unique machine (assumes x, y, theme uniquely identify a machine)
+    unique_machines = current_df.drop_duplicates(subset=["x", "y", "theme"])[["theme", "x", "y", "bar_slot"]].copy()
+    unique_machines["machine_key"] = list(zip(unique_machines["theme"], unique_machines["x"], unique_machines["y"]))
+    bar_machines = unique_machines[unique_machines["bar_slot"] == 1]["machine_key"].tolist()
+    nonbar_machines = unique_machines[unique_machines["bar_slot"] == 0]["machine_key"].tolist()
+
+    current_df = current_df.drop(columns=["theme"])
     current_df["coinin"] = predict_total_coinin(current_df, model)
-    current_score = current_df["coinin"].sum()
+    current_total = current_df["coinin"].sum()
     best_df = current_df.copy()
-    best_score = current_score
+    best_total = current_total
 
-    print(f"Initial predicted total coin-in: ${current_score:,.2f}")
+    print(f"Initial predicted total coin-in: ${current_total:,.2f}")
 
-    for i in range(iterations):
+    swap_log = []
+
+    for it in range(iterations):
+        print(f"Iteration {it + 1}/{iterations} | Current total: ${current_total:,.2f} | Temp: {temp:.4f}")
         temp *= cooling_rate
+        improved = False
         temp_df = current_df.copy()
 
-        # Identify bar and non-bar machines
-        bar_mask = temp_df["bar_slot"] == 1
-        bar_indices = temp_df[bar_mask].index.tolist()
-        nonbar_indices = temp_df[~bar_mask].index.tolist()
-
-        # Perform swaps
         for _ in range(swaps_per_iter):
-            if random.random() < 0.5 and len(bar_indices) >= 2:
-                a, b = random.sample(bar_indices, 2)
+            print(f"Performing {swaps_per_iter} swaps...")
+            # Choose bar or nonbar group randomly
+            if random.random() < 0.5 and len(bar_machines) >= 2:
+                machine_list = bar_machines
+                group = "bar"
+            elif len(nonbar_machines) >= 2:
+                machine_list = nonbar_machines
+                group = "nonbar"
             else:
-                a, b = random.sample(nonbar_indices, 2)
+                continue
 
-            temp_df.loc[a, ["x", "y"]], temp_df.loc[b, ["x", "y"]] = (
-                temp_df.loc[b, ["x", "y"]].values,
-                temp_df.loc[a, ["x", "y"]].values
-            )
+            key_a, key_b = random.sample(machine_list, 2)
 
-        # Update spatial features and reassign clusters
+            # Create masks for all rows for each machine (all days)
+            mask_a = (temp_df[theme_columns].idxmax(axis=1).str.replace("is_", "") == key_a[0]) & (temp_df["x"] == key_a[1]) & (temp_df["y"] == key_a[2])
+            mask_b = (temp_df[theme_columns].idxmax(axis=1).str.replace("is_", "") == key_b[0]) & (temp_df["x"] == key_b[1]) & (temp_df["y"] == key_b[2])
+            x_a, y_a = key_a[1], key_a[2]
+            x_b, y_b = key_b[1], key_b[2]
+
+            # Swap locations for all days
+            temp_df.loc[mask_a, ["x", "y"]] = [x_b, y_b]
+            temp_df.loc[mask_b, ["x", "y"]] = [x_a, y_a]
+
         temp_df = assign_spatial_features(temp_df)
         temp_df["coinin"] = predict_total_coinin(temp_df, model)
-        new_score = temp_df["coinin"].sum()
+        new_total = temp_df["coinin"].sum()
+        delta = new_total - current_total
 
-        # Accept if better or by probability
-        if new_score > current_score or random.random() < np.exp((new_score - current_score) / temp):
+        # Accept swap if better, or with probability exp(delta/temp)
+        if delta > 0 or random.random() < np.exp(delta / temp):
             current_df = temp_df
-            current_score = new_score
-            if new_score > best_score:
-                best_df = temp_df
-                best_score = new_score
+            current_total = new_total
+            improved = True
+            swap_log.append({
+                "iteration": it + 1,
+                "gain": delta,
+                "accepted": True
+            })
+            if current_total > best_total:
+                best_total = current_total
+                best_df = current_df.copy()
+        else:
+            swap_log.append({
+                "iteration": it + 1,
+                "gain": delta,
+                "accepted": False
+            })
 
-        if (i + 1) % 100 == 0:
-            print(f"Iteration {i+1}: Current Score = ${current_score:,.2f}, Best = ${best_score:,.2f}")
+        if (it + 1) % log_every == 0 or it == 0:
+            print(f"Iteration {it + 1}: Current total predicted coin-in: ${current_total:,.2f} | Best: ${best_total:,.2f} | Temp: {temp:.4f}")
 
-    return best_df, df["coinin"].sum(), best_score
+    print(f"\nOptimization complete. Best predicted total coin-in: ${best_total:,.2f}")
+    return best_df, swap_log
 
-# === MAIN EXECUTION ===
+if __name__ == "__main__":
+    train_df = pd.read_csv(args.features)
+    y = train_df["coinin"]
+    X = train_df.drop(columns=["coinin"])
+    model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
+    print("Training Random Forest Regressor on all data...")
+    model.fit(X, y)
 
-# Load training data and model
-train_df = pd.read_csv(args.features)
-y = train_df["coinin"]
-X = train_df.drop(columns=["coinin"])
-model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
-model.fit(X, y)
+    future_df = pd.read_csv(args.future_layout)
+    clustered_coords = pd.read_csv(args.cluster_coords)
+    if "cluster_id" in future_df.columns:
+        future_df = future_df.drop(columns=["cluster_id"])
+    future_df = future_df.merge(clustered_coords, on=["x", "y"], how="left")
+    future_df = assign_spatial_features(future_df)
+    future_df["coinin"] = predict_total_coinin(future_df, model)
+    future_df.to_csv(args.original_output, index=False)
+    original_total = future_df["coinin"].sum()
+    original_coinin_per_machine = future_df[["x", "y", "coinin"]].copy()
 
-# Load future layout
-future_df = pd.read_csv(args.future_layout)
+    print("\nStarting simulated annealing optimization...")
+    optimized_df, swap_log = simulated_annealing_swap_optimizer(
+        future_df, model, iterations=500, temp=1.0, cooling_rate=0.98, swaps_per_iter=1, log_every=25
+    )
+    optimized_total = optimized_df["coinin"].sum()
 
-# Merge in cluster_id (ensure no suffixes)
-clustered_coords = pd.read_csv(args.cluster_coords)
-if "cluster_id" in future_df.columns:
-    future_df = future_df.drop(columns=["cluster_id"])
-future_df = future_df.merge(clustered_coords, on=["x", "y"], how="left")
+    pd.DataFrame(swap_log).to_csv(args.optimized_output.replace(".csv", "_swap_log.csv"), index=False)
 
-# Assign all spatial features
-future_df = assign_spatial_features(future_df)
+    # Aggregate before merging for heatmap
+    original_coinin_per_machine = future_df.groupby(["x", "y"], as_index=False)["coinin"].sum()
+    after_coinin = optimized_df.groupby(["x", "y"], as_index=False)["coinin"].sum().rename(columns={"coinin": "coinin_after"})
+    comparison = original_coinin_per_machine.merge(after_coinin, on=["x", "y"], how="inner")
 
-# === Predict initial layout coin-in and save it ===
-future_df = assign_spatial_features(future_df)
-future_df["coinin"] = predict_total_coinin(future_df, model)
+    # Draw heatmap of coin-in before and after optimization
+    fig, ax = plt.subplots(1, 2, figsize=(14, 6))
+    pivot_before = comparison.pivot(index="x", columns="y", values="coinin")
+    pivot_after = comparison.pivot(index="x", columns="y", values="coinin_after")
 
-# Save original layout to CSV
-future_df.to_csv(args.original_output, index=False)
+    im0 = ax[0].imshow(pivot_before, origin="upper", cmap="coolwarm", aspect="equal", vmin=0, vmax=np.nanpercentile(pivot_before.values, 85))
+    ax[0].set_title("Coin-In Before Optimization")
+    plt.colorbar(im0, ax=ax[0])
 
-# === Store original total for plotting ===
-original_total = future_df["coinin"].sum()
+    im1 = ax[1].imshow(pivot_after, origin="upper", cmap="coolwarm", aspect="equal", vmin=0, vmax=np.nanpercentile(pivot_after.values, 85))
+    ax[1].set_title("Coin-In After Optimization")
+    plt.colorbar(im1, ax=ax[1])
 
-future_df.to_csv(args.original_output, index=False)
+    plt.tight_layout()
+    plt.show()
 
-# Run simulated annealing
-optimized_df, original_total, optimized_total = simulated_annealing(
-    future_df, model, iterations=1000, swaps_per_iter=10, temp=1.0, cooling_rate=0.95
-)
+    # Bar Plot: Before vs After
+    plt.figure(figsize=(6, 4))
+    plt.bar(["Original", "Optimized"], [original_total, optimized_total], color=["gray", "green"])
+    plt.ylabel("Total Predicted Coin-In ($)")
+    plt.title("Simulated Annealing Optimization Result")
+    plt.tight_layout()
+    plt.show()
 
-# === Heatmap of Optimized Layout ===
-agg = optimized_df.groupby(['x', 'y']).agg(total_wager=('coinin', 'sum')).reset_index()
-pivot = agg.pivot(index='x', columns='y', values='total_wager')
+    optimized_df.to_csv(args.optimized_output_wPred, index=False)
+    print(f"\nSaved optimized layout to {args.optimized_output_wPred}")
 
-plt.figure(figsize=(12, 10))
-plt.imshow(
-    pivot,
-    origin='upper',
-    cmap='coolwarm',
-    aspect='equal',
-    vmin=0,
-    vmax=np.nanpercentile(pivot.values, 85)
-)
-plt.colorbar(label='Total Coin-In ($)')
-plt.title("Optimized Casino Floor Heatmap (Predicted)")
-plt.xlabel('Y coordinate (right)')
-plt.ylabel('X coordinate (down)')
-plt.xticks(ticks=np.arange(len(pivot.columns)), labels=pivot.columns)
-plt.yticks(ticks=np.arange(len(pivot.index)), labels=pivot.index)
-plt.tight_layout()
-plt.show()
+    # === STEP 6: Generate machine layout ===
+    theme_columns = optimized_df.iloc[:, 50:184].columns.tolist()
+    machine_layout = optimized_df.loc[:, ["x", "y"] + theme_columns]
+    machine_layout["theme"] = machine_layout[theme_columns].idxmax(axis=1).str.replace("is_", "")
+    machine_layout = machine_layout.drop_duplicates(subset=["x", "y"])
+    machine_layout = machine_layout.loc[:, ["x", "y", "theme"]]
+    machine_layout.to_csv(args.optimized_output, index=False)
 
-# === Bar Plot: Original vs Optimized Coin-In ===
-plt.figure(figsize=(6, 4))
-plt.bar(["Original", "Optimized"], [original_total, optimized_total], color=["gray", "green"])
-plt.ylabel("Total Predicted Coin-In ($)")
-plt.title("Simulated Annealing Optimization Result")
-plt.tight_layout()
-plt.show()
-
-# === Save optimized layout with predictions ===
-optimized_df.to_csv(args.optimized_output_wPred, index=False)
-
-
-# Save final layout
-# Dynamically determine theme columns based on their position in the DataFrame
-theme_columns = optimized_df.iloc[:, 50:184].columns.tolist()  
-
-# Extract x, y, and the theme where is_theme is true
-machine_layout = optimized_df.loc[:, ["x", "y"] + theme_columns]
-
-# Find the theme where is_theme is true for each machine
-machine_layout["theme"] = machine_layout[theme_columns].idxmax(axis=1).str.replace("is_", "")
-
-# Drop duplicates to ensure only one machine per x, y location
-machine_layout = machine_layout.drop_duplicates(subset=["x", "y"])
-
-# Drop the theme flag columns to keep only x, y, and theme
-machine_layout = machine_layout.loc[:, ["x", "y", "theme"]]
-
-machine_layout.to_csv(args.optimized_output, index=False)
-print(f"\nSaved optimized layout to {args.optimized_output}")
-print(f"Original total predicted coin-in: ${original_total:,.2f}")
-print(f"Optimized total predicted coin-in: ${optimized_total:,.2f}")
-
+    print(f"Original total predicted coin-in: ${original_total:,.2f}")
+    print(f"Optimized total predicted coin-in: ${optimized_total:,.2f}")
