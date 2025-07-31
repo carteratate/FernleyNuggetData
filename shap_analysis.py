@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser(description="SHAP analysis for RandomForest")
 parser.add_argument("--features", default="Data/features.csv", help="Features CSV")
 parser.add_argument(
     "--output-dir",
-    default="Data",
+    default="Images",
     help="Directory where summary plots will be written",
 )
 parser.add_argument(
@@ -23,7 +23,7 @@ parser.add_argument(
 parser.add_argument(
     "--shap-sample-size",
     type=int,
-    default=100,
+    default=1000,
     help="Number of rows to sample for SHAP analysis (default: 1000)",
 )
 args = parser.parse_args()
@@ -115,7 +115,6 @@ for name, cols in categories.items():
     shap.summary_plot(
         shap_values[:, [shap_X.columns.get_loc(c) for c in cols]],
         shap_X[cols],
-        plot_type="bar",
         show=False,
     )
     plt.title(f"{name.capitalize()} Feature Importance")
