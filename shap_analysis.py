@@ -20,6 +20,12 @@ parser.add_argument(
     action="store_true",
     help="Display plots interactively in addition to saving",
 )
+parser.add_argument(
+    "--shap-sample-size",
+    type=int,
+    default=100,
+    help="Number of rows to sample for SHAP analysis (default: 1000)",
+)
 args = parser.parse_args()
 
 # === STEP 1: Load training features ===
@@ -34,16 +40,29 @@ X = df.drop(columns=["coinin"])
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
+print(f"Training Random Forest Regressor on {len(X_train)} rows...")
 rf = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
 rf.fit(X_train, y_train)
 
 # === STEP 3: Compute SHAP values ===
+# print("Computing SHAP values...")
+# explainer = shap.TreeExplainer(rf)
+# shap_values = explainer.shap_values(X_train)
+print("Sampling data for SHAP analysis...")
+if args.shap_sample_size < len(X_train):
+    shap_X = X_train.sample(n=args.shap_sample_size, random_state=42)
+else:
+    shap_X = X_train
+print(f"Computing SHAP values for {len(shap_X)} rows...")
 explainer = shap.TreeExplainer(rf)
-shap_values = explainer.shap_values(X_train)
+print("Explainer initialized. Computing SHAP values...")
+shap_values = explainer.shap_values(shap_X)
+print("Finished SHAP value computation.")
 
 # === STEP 4: Summary plot for all features ===
+print("Generating overall feature importance summary plot...")
 os.makedirs(args.output_dir, exist_ok=True)
-shap.summary_plot(shap_values, X_train, show=False)
+shap.summary_plot(shap_values, shap_X, show=False)
 plt.title("Overall Feature Importance")
 plt.tight_layout()
 plt.savefig(os.path.join(args.output_dir, "shap_overall.png"))
@@ -84,23 +103,25 @@ def categorize_columns(cols):
 
     return categories
 
+print("Categorizing features into spatial, game, and temporal categories...")
+categories = categorize_columns(shap_X.columns)
 
-categories = categorize_columns(X_train.columns)
-
+print("Feature categories identified:")
 for name, cols in categories.items():
     if not cols:
         print(f"No {name} features found")
         continue
     print(f"\n{name.capitalize()} features found:", cols)
     shap.summary_plot(
-        shap_values[:, [X_train.columns.get_loc(c) for c in cols]],
-        X_train[cols],
+        shap_values[:, [shap_X.columns.get_loc(c) for c in cols]],
+        shap_X[cols],
         plot_type="bar",
         show=False,
     )
     plt.title(f"{name.capitalize()} Feature Importance")
     plt.tight_layout()
     plt.savefig(os.path.join(args.output_dir, f"shap_{name}.png"))
+
     if args.show:
         plt.show()
     plt.close()
